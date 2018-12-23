@@ -193,7 +193,7 @@ static void nids_syslog(int type, int errnum, struct ip *iph, void *data)
 /* called either directly from pcap_hand() or from cap_queue_process_thread()
  * depending on the value of nids_params.multiproc - mcree
  */
-static void call_ip_frag_procs(void *data,bpf_u_int32 caplen)
+static void call_ip_frag_procs(void *data, bpf_u_int32 caplen)
 {
     struct proc_node *i;
     for (i = ip_frag_procs; i; i = i->next)
@@ -220,7 +220,7 @@ static void call_ip_frag_procs(void *data,bpf_u_int32 caplen)
 #define LLC_OFFSET_TO_TYPE_FIELD 6
 #define ETHERTYPE_IP 0x0800
 
-void nids_pcap_handler(u_char * par, struct pcap_pkthdr *hdr, u_char * data)
+void nids_pcap_handler(u_char *par, struct pcap_pkthdr *hdr, u_char *data)
 {
     u_char *data_aligned;
 #ifdef HAVE_LIBGTHREAD_2_0
@@ -238,77 +238,77 @@ void nids_pcap_handler(u_char * par, struct pcap_pkthdr *hdr, u_char * data)
      * otherwise nids_tcp_timeouts is always NULL.
      */
     if (NULL != nids_tcp_timeouts)
-      tcp_check_timeouts(&hdr->ts);
+		tcp_check_timeouts(&hdr->ts);
 
     nids_last_pcap_header = hdr;
     nids_last_pcap_data = data;
     (void)par; /* warnings... */
     switch (linktype) {
     case DLT_EN10MB:
-	if (hdr->caplen < 14)
-	    return;
-	/* Only handle IP packets and 802.1Q VLAN tagged packets below. */
-	if (data[12] == 8 && data[13] == 0) {
-	    /* Regular ethernet */
-	    nids_linkoffset = 14;
-	} else if (data[12] == 0x81 && data[13] == 0) {
-	    /* Skip 802.1Q VLAN and priority information */
-	    nids_linkoffset = 18;
-	} else
-	    /* non-ip frame */
-	    return;
-	break;
+		if (hdr->caplen < 14)
+		    return;
+		/* Only handle IP packets and 802.1Q VLAN tagged packets below. */
+		if (data[12] == 8 && data[13] == 0) {
+		    /* Regular ethernet */
+		    nids_linkoffset = 14;
+		} else if (data[12] == 0x81 && data[13] == 0) {
+		    /* Skip 802.1Q VLAN and priority information */
+		    nids_linkoffset = 18;
+		} else
+		    /* non-ip frame */
+	    	return;
+		break;
 #ifdef DLT_PRISM_HEADER
 #ifndef DLT_IEEE802_11
 #error DLT_PRISM_HEADER is defined, but DLT_IEEE802_11 is not ???
 #endif
     case DLT_PRISM_HEADER:
-	nids_linkoffset = 144; //sizeof(prism2_hdr);
-	linkoffset_tweaked_by_prism_code = 1;
-        //now let DLT_IEEE802_11 do the rest
+		nids_linkoffset = 144; //sizeof(prism2_hdr);
+		linkoffset_tweaked_by_prism_code = 1;
+		//now let DLT_IEEE802_11 do the rest
 #endif
 #ifdef DLT_IEEE802_11_RADIO
     case DLT_IEEE802_11_RADIO:
-        // just get rid of the radio tap header
-        if (!linkoffset_tweaked_by_prism_code) {
-          nids_linkoffset = EXTRACT_LE_16BITS(data + 2); // skip radiotap header
-          linkoffset_tweaked_by_radio_code = 1;
-        }
-        //now let DLT_IEEE802_11 do the rest
+		// just get rid of the radio tap header
+		if (!linkoffset_tweaked_by_prism_code) {
+			nids_linkoffset = EXTRACT_LE_16BITS(data + 2); // skip radiotap header
+			linkoffset_tweaked_by_radio_code = 1;
+		}
+		//now let DLT_IEEE802_11 do the rest
 #endif
 #ifdef DLT_IEEE802_11
     case DLT_IEEE802_11:
-	/* I don't know why frame control is always little endian, but it 
-	 * works for tcpdump, so who am I to complain? (wam)
-	 */
-	if (!linkoffset_tweaked_by_prism_code && !linkoffset_tweaked_by_radio_code)
-		nids_linkoffset = 0;
-	fc = EXTRACT_LE_16BITS(data + nids_linkoffset);
-	if (FC_TYPE(fc) != T_DATA || FC_WEP(fc)) {
-	    return;
-	}
-	if (FC_TO_DS(fc) && FC_FROM_DS(fc)) {
-	    /* a wireless distribution system packet will have another
-	     * MAC addr in the frame
-	     */
-	    nids_linkoffset += 30;
-	} else {
-	    nids_linkoffset += 24;
-	}
-	if (DATA_FRAME_IS_QOS(FC_SUBTYPE(fc)))
-	  nids_linkoffset += 2;
-	if (hdr->len < nids_linkoffset + LLC_FRAME_SIZE)
-	    return;
-	if (ETHERTYPE_IP !=
-	    EXTRACT_16BITS(data + nids_linkoffset + LLC_OFFSET_TO_TYPE_FIELD)) {
-	    /* EAP, LEAP, and other 802.11 enhancements can be 
-	     * encapsulated within a data packet too.  Look only at
-	     * encapsulated IP packets (Type field of the LLC frame).
-	     */
-	    return;
-	}
-	nids_linkoffset += LLC_FRAME_SIZE;
-	break;
+		/* I don't know why frame control is always little endian, but it 
+		 * works for tcpdump, so who am I to complain? (wam)
+		 */
+		if (!linkoffset_tweaked_by_prism_code && !linkoffset_tweaked_by_radio_code)
+			nids_linkoffset = 0;
+		fc = EXTRACT_LE_16BITS(data + nids_linkoffset);
+		if (FC_TYPE(fc) != T_DATA || FC_WEP(fc)) {
+		    return;
+		}
+		if (FC_TO_DS(fc) && FC_FROM_DS(fc)) {
+		    /* a wireless distribution system packet will have another
+		     * MAC addr in the frame
+		     */
+		    nids_linkoffset += 30;
+		} else {
+		    nids_linkoffset += 24;
+		}
+		if (DATA_FRAME_IS_QOS(FC_SUBTYPE(fc)))
+		  nids_linkoffset += 2;
+		if (hdr->len < nids_linkoffset + LLC_FRAME_SIZE)
+		    return;
+		if (ETHERTYPE_IP !=
+		    EXTRACT_16BITS(data + nids_linkoffset + LLC_OFFSET_TO_TYPE_FIELD)) {
+		    /* EAP, LEAP, and other 802.11 enhancements can be 
+		     * encapsulated within a data packet too.  Look only at
+		     * encapsulated IP packets (Type field of the LLC frame).
+		     */
+		    return;
+		}
+		nids_linkoffset += LLC_FRAME_SIZE;
+		break;
 #endif
     default:;
     }
@@ -322,12 +322,12 @@ void nids_pcap_handler(u_char * par, struct pcap_pkthdr *hdr, u_char * data)
 */
 #ifdef LBL_ALIGN
     if ((unsigned long) (data + nids_linkoffset) & 0x3) {
-	data_aligned = alloca(hdr->caplen - nids_linkoffset + 4);
-	data_aligned -= (unsigned long) data_aligned % 4;
-	memcpy(data_aligned, data + nids_linkoffset, hdr->caplen - nids_linkoffset);
+		data_aligned = alloca(hdr->caplen - nids_linkoffset + 4);
+		data_aligned -= (unsigned long) data_aligned % 4;
+		memcpy(data_aligned, data + nids_linkoffset, hdr->caplen - nids_linkoffset);
     } else 
 #endif
-  data_aligned = data + nids_linkoffset;
+  	data_aligned = data + nids_linkoffset;
 
  #ifdef HAVE_LIBGTHREAD_2_0
      if(nids_params.multiproc) { 
@@ -338,25 +338,25 @@ void nids_pcap_handler(u_char * par, struct pcap_pkthdr *hdr, u_char * data)
          */
         qitem=malloc(sizeof(struct cap_queue_item));
         if (qitem && (qitem->data=malloc(hdr->caplen - nids_linkoffset))) {
-          qitem->caplen=hdr->caplen - nids_linkoffset;
-          memcpy(qitem->data,data_aligned,qitem->caplen);
-          g_async_queue_lock(cap_queue);
-          /* ensure queue does not overflow */
-          if(g_async_queue_length_unlocked(cap_queue) > nids_params.queue_limit) {
-	    /* queue limit reached: drop packet - should we notify user via syslog? */
-	    free(qitem->data);
-	    free(qitem);
-	    } else {
-	    /* insert packet to queue */
-	    g_async_queue_push_unlocked(cap_queue,qitem);
-          }
-          g_async_queue_unlock(cap_queue);
-	}
+			qitem->caplen=hdr->caplen - nids_linkoffset;
+			memcpy(qitem->data,data_aligned,qitem->caplen);
+			g_async_queue_lock(cap_queue);
+			/* ensure queue does not overflow */
+			if(g_async_queue_length_unlocked(cap_queue) > nids_params.queue_limit) {
+				/* queue limit reached: drop packet - should we notify user via syslog? */
+				free(qitem->data);
+				free(qitem);
+			} else {
+				/* insert packet to queue */
+				g_async_queue_push_unlocked(cap_queue,qitem);
+			}
+			g_async_queue_unlock(cap_queue);
+		}
      } else { /* user requested simple passthru - no threading */
-        call_ip_frag_procs(data_aligned,hdr->caplen - nids_linkoffset);
+        call_ip_frag_procs(data_aligned, hdr->caplen - nids_linkoffset);
      }
  #else
-     call_ip_frag_procs(data_aligned,hdr->caplen - nids_linkoffset);
+     call_ip_frag_procs(data_aligned, hdr->caplen - nids_linkoffset);
  #endif
 }
 
@@ -366,33 +366,34 @@ static void gen_ip_frag_proc(u_char * data, int len)
     struct ip *iph = (struct ip *) data;
     int need_free = 0;
     int skblen;
-    void (*glibc_syslog_h_workaround)(int, int, struct ip *, void*)=
-        nids_params.syslog;
+    void (*glibc_syslog_h_workaround)(int, int, struct ip *, void*)= nids_params.syslog;
 
     if (!nids_params.ip_filter(iph, len))
-	return;
+		return;
 
-    if (len < (int)sizeof(struct ip) || iph->ip_hl < 5 || iph->ip_v != 4 ||
-	ip_fast_csum((unsigned char *) iph, iph->ip_hl) != 0 ||
-	len < ntohs(iph->ip_len) || ntohs(iph->ip_len) < iph->ip_hl << 2) {
-	glibc_syslog_h_workaround(NIDS_WARN_IP, NIDS_WARN_IP_HDR, iph, 0);
-	return;
+    if (len < (int)sizeof(struct ip) || iph->ip_hl < 5 || iph->ip_v != 4 
+		  || ip_fast_csum((unsigned char *) iph, iph->ip_hl) != 0 
+		  || len < ntohs(iph->ip_len) || ntohs(iph->ip_len) < iph->ip_hl << 2) {
+		glibc_syslog_h_workaround(NIDS_WARN_IP, NIDS_WARN_IP_HDR, iph, 0);
+		return;
     }
     if (iph->ip_hl > 5 && ip_options_compile((unsigned char *)data)) {
-	glibc_syslog_h_workaround(NIDS_WARN_IP, NIDS_WARN_IP_SRR, iph, 0);
-	return;
+		glibc_syslog_h_workaround(NIDS_WARN_IP, NIDS_WARN_IP_SRR, iph, 0);
+		return;
     }
+	
     switch (ip_defrag_stub((struct ip *) data, &iph)) {
     case IPF_ISF:
-	return;
+		return;
     case IPF_NOTF:
-	need_free = 0;
-	iph = (struct ip *) data;
-	break;
+		need_free = 0;
+		iph = (struct ip *) data;
+		break;
     case IPF_NEW:
-	need_free = 1;
-	break;
-    default:;
+		need_free = 1;
+		break;
+    default:
+		;
     }
     skblen = ntohs(iph->ip_len) + 16;
     if (!need_free)
@@ -401,7 +402,7 @@ static void gen_ip_frag_proc(u_char * data, int len)
     skblen += nids_params.sk_buff_size;
 
     for (i = ip_procs; i; i = i->next)
-	(i->item) (iph, skblen);
+		(i->item) (iph, skblen);
     if (need_free)
 	free(iph);
 }
@@ -543,11 +544,11 @@ static int open_live()
 
 #define START_CAP_QUEUE_PROCESS_THREAD() \
     if(nids_params.multiproc) { /* threading... */ \
-	 if(!(g_thread_create_full((GThreadFunc)cap_queue_process_thread,NULL,0,FALSE,TRUE,G_THREAD_PRIORITY_LOW,&gerror))) { \
-	    strcpy(nids_errbuf, "thread: "); \
-	    strncat(nids_errbuf, gerror->message, sizeof(nids_errbuf) - 8); \
-	    return 0; \
-	 }; \
+	 	if(!(g_thread_create_full((GThreadFunc)cap_queue_process_thread,NULL,0,FALSE,TRUE,G_THREAD_PRIORITY_LOW,&gerror))) { \
+		    strcpy(nids_errbuf, "thread: "); \
+		    strncat(nids_errbuf, gerror->message, sizeof(nids_errbuf) - 8); \
+		    return 0; \
+	 	}; \
     }
 
 #define STOP_CAP_QUEUE_PROCESS_THREAD() \
@@ -562,16 +563,17 @@ static int open_live()
  */
 static void cap_queue_process_thread()
 {
-     struct cap_queue_item *qitem;
-     
-     while(1) { /* loop "forever" */
-	  qitem=g_async_queue_pop(cap_queue);
-	  if (qitem==&EOF_item) break; /* EOF item received: we should exit */
-	  call_ip_frag_procs(qitem->data,qitem->caplen);
-	  free(qitem->data);
-	  free(qitem);
-     }
-     g_thread_exit(NULL);
+	struct cap_queue_item *qitem;
+
+	while(1) { /* loop "forever" */
+		qitem=g_async_queue_pop(cap_queue);
+		if (qitem == &EOF_item) 
+			break; /* EOF item received: we should exit */
+		call_ip_frag_procs(qitem->data, qitem->caplen);
+		free(qitem->data);
+		free(qitem);
+	}
+	g_thread_exit(NULL);
 }
 
 #else
@@ -684,8 +686,8 @@ int nids_init()
 int nids_run()
 {
     if (!desc) {
-	strcpy(nids_errbuf, "Libnids not initialized");
-	return 0;
+		strcpy(nids_errbuf, "Libnids not initialized");
+		return 0;
     }
     START_CAP_QUEUE_PROCESS_THREAD(); /* threading... */
     pcap_loop(desc, -1, (pcap_handler) nids_pcap_handler, 0);
