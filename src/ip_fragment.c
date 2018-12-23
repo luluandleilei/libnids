@@ -179,29 +179,29 @@ del_timer(struct timer_list * x)
 static void
 frag_kfree_skb(struct sk_buff * skb, int type)
 {
-  if (this_host)
-    atomic_sub(skb->truesize, &this_host->ip_frag_mem);
-  kfree_skb(skb, type);
+	if (this_host)
+		atomic_sub(skb->truesize, &this_host->ip_frag_mem);
+	kfree_skb(skb, type);
 }
 
 static void
 frag_kfree_s(void *ptr, int len)
 {
-  if (this_host)
-    atomic_sub(len, &this_host->ip_frag_mem);
-  free(ptr);
+	if (this_host)
+		atomic_sub(len, &this_host->ip_frag_mem);
+	free(ptr);
 }
 
 static void *
 frag_kmalloc(int size, int dummy)
 {
-  void *vp = (void *) malloc(size);
-  (void)dummy;
-  if (!vp)
-    return NULL;
-  atomic_add(size, &this_host->ip_frag_mem);
-  
-  return vp;
+	void *vp = (void *) malloc(size);
+	(void)dummy;
+	if (!vp)
+	return NULL;
+	atomic_add(size, &this_host->ip_frag_mem);
+
+	return vp;
 }
 
 /* Create a new fragment entry. */
@@ -260,38 +260,38 @@ hostfrag_find(struct ip * iph)
 static void
 hostfrag_create(struct ip * iph)
 {
-  struct hostfrags *hf = mknew(struct hostfrags);
-  int hash_index = frag_index(iph);
+	struct hostfrags *hf = mknew(struct hostfrags);
+	int hash_index = frag_index(iph);
 
-  hf->prev = 0;
-  hf->next = fragtable[hash_index];
-  if (hf->next)
-    hf->next->prev = hf;
-  fragtable[hash_index] = hf;
-  hf->ip = iph->ip_dst.s_addr;
-  hf->ipqueue = 0;
-  hf->ip_frag_mem = 0;
-  hf->hash_index = hash_index;
-  this_host = hf;
+	hf->prev = 0;
+	hf->next = fragtable[hash_index];
+	if (hf->next)
+	hf->next->prev = hf;
+	fragtable[hash_index] = hf;
+	hf->ip = iph->ip_dst.s_addr;
+	hf->ipqueue = 0;
+	hf->ip_frag_mem = 0;
+	hf->hash_index = hash_index;
+	this_host = hf;
 }
 
 static void
 rmthis_host()
 {
-  int hash_index = this_host->hash_index;
+	int hash_index = this_host->hash_index;
 
-  if (this_host->prev) {
-    this_host->prev->next = this_host->next;
-    if (this_host->next)
-      this_host->next->prev = this_host->prev;
-  }
-  else {
-    fragtable[hash_index] = this_host->next;
-    if (this_host->next)
-      this_host->next->prev = 0;
-  }
-  free(this_host);
-  this_host = 0;
+	if (this_host->prev) {
+		this_host->prev->next = this_host->next;
+		if (this_host->next)
+			this_host->next->prev = this_host->prev;
+	}
+	else {
+		fragtable[hash_index] = this_host->next;
+		if (this_host->next)
+			this_host->next->prev = 0;
+	}
+	free(this_host);
+	this_host = 0;
 }
 
 /*
@@ -326,38 +326,39 @@ ip_find(struct ip * iph)
 static void
 ip_free(struct ipq * qp)
 {
-  struct ipfrag *fp;
-  struct ipfrag *xp;
+	struct ipfrag *fp;
+	struct ipfrag *xp;
 
-  /* Stop the timer for this entry. */
-  del_timer(&qp->timer);
-  
-  /* Remove this entry from the "incomplete datagrams" queue. */
-  if (qp->prev == NULL) {
-    this_host->ipqueue = qp->next;
-    if (this_host->ipqueue != NULL)
-      this_host->ipqueue->prev = NULL;
-    else
-      rmthis_host();
-  }
-  else {
-    qp->prev->next = qp->next;
-    if (qp->next != NULL)
-      qp->next->prev = qp->prev;
-  }
-  /* Release all fragment data. */
-  fp = qp->fragments;
-  while (fp != NULL) {
-    xp = fp->next;
-    frag_kfree_skb(fp->skb, FREE_READ);
-    frag_kfree_s(fp, sizeof(struct ipfrag));
-    fp = xp;
-  }
-  /* Release the IP header. */
-  frag_kfree_s(qp->iph, 64 + 8);
-  
-  /* Finally, release the queue descriptor itself. */
-  frag_kfree_s(qp, sizeof(struct ipq));
+	/* Stop the timer for this entry. */
+	del_timer(&qp->timer);
+
+	/* Remove this entry from the "incomplete datagrams" queue. */
+	if (qp->prev == NULL) {
+		this_host->ipqueue = qp->next;
+		if (this_host->ipqueue != NULL)
+			this_host->ipqueue->prev = NULL;
+		else
+			rmthis_host();
+	}
+	else {
+		qp->prev->next = qp->next;
+		if (qp->next != NULL)
+			qp->next->prev = qp->prev;
+	}
+	
+	/* Release all fragment data. */
+	fp = qp->fragments;
+	while (fp != NULL) {
+		xp = fp->next;
+		frag_kfree_skb(fp->skb, FREE_READ);
+		frag_kfree_s(fp, sizeof(struct ipfrag));
+		fp = xp;
+	}
+	/* Release the IP header. */
+	frag_kfree_s(qp->iph, 64 + 8);
+
+	/* Finally, release the queue descriptor itself. */
+	frag_kfree_s(qp, sizeof(struct ipq));
 }
 
 /* Oops- a fragment queue timed out.  Kill it and send an ICMP reply. */
@@ -432,7 +433,7 @@ ip_create(struct ip * iph)
 	qp->prev = NULL;
 	qp->next = this_host->ipqueue;
 	if (qp->next != NULL)
-	qp->next->prev = qp;
+		qp->next->prev = qp;
 	this_host->ipqueue = qp;
 
 	return (qp);
@@ -642,9 +643,9 @@ ip_defrag(struct ip *iph, struct sk_buff *skb)
 	*/
 	for (tmp = next; tmp != NULL; tmp = tfp) {
 		tfp = tmp->next;
-	if (tmp->offset >= end)
-	break;			/* no overlaps at all */
-	nids_params.syslog(NIDS_WARN_IP, NIDS_WARN_IP_OVERLAP, iph, 0);
+		if (tmp->offset >= end)
+			break;			/* no overlaps at all */
+		nids_params.syslog(NIDS_WARN_IP, NIDS_WARN_IP_OVERLAP, iph, 0);
 
 	i = end - next->offset;	/* overlap is 'i' bytes */
 	tmp->len -= i;		/* so reduce size of    */
